@@ -20,7 +20,7 @@ namespace PaymentService.Api.RabbitMQ
 
         public void StartListening()
         {
-            using var channel = _connection.CreateModel();
+            using var channel = _connection.GetConnection().CreateModel();
             channel.QueueDeclare(queue: "orders", durable: false, exclusive: false, autoDelete: false);
 
             var consumer = new EventingBasicConsumer(channel);
@@ -29,44 +29,44 @@ namespace PaymentService.Api.RabbitMQ
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
 
-                var order = JsonSerializer.Deserialize<OrderMessage>(message);
+                var orderMessage = JsonSerializer.Deserialize<OrderMessage>(message);
+                Log.Information($"Processing payment for Order: {orderMessage.OrderId} - {orderMessage.Product}");
 
-                Log.Information($"Processing payment for Order: {order.OrderId} - {order.Product}");
-                var success = ProcessPayment(order);
+                var success = ProcessPayment(orderMessage);
 
-                if (success)
-                {
-                    Log.Information($"Payment succeeded for Order: {order.OrderId}");
-                }
-                else
-                {
-                    Log.Error($"Payment failed for Order: {order.OrderId}");
-                }
+                // Ödeme sonucunu order_updates kuyruğuna gönder
+                PublishOrderUpdate(orderMessage, success);
             };
 
             channel.BasicConsume(queue: "orders", autoAck: true, consumer: consumer);
-
-            Log.Information("Waiting for orders.");
+            Log.Information("Waiting for orders...");
             Console.ReadLine();
         }
 
         private bool ProcessPayment(OrderMessage order)
         {
-            bool success = new Random().Next(2) == 1;  // Ödeme işlemini simüle
+            // Ödeme işlemini simüle ediyoruz (Başarılı veya Başarısız)
+            return new Random().Next(2) == 1;
+        }
 
-            using var channel = _connection.CreateModel();
+        private void PublishOrderUpdate(OrderMessage order, bool success)
+        {
+            using var channel = _connection.GetConnection().CreateModel();
             channel.QueueDeclare(queue: "order_updates", durable: false, exclusive: false, autoDelete: false);
 
             var updateMessage = JsonSerializer.Serialize(new OrderUpdateMessage
             {
                 OrderId = order.OrderId,
-                Status = success ? OrderStatus.Completed : OrderStatus.Failed
+                Status = success ? OrderStatus.Completed : OrderStatus.Failed  // String yerine Enum kullanımı
             });
 
             var body = Encoding.UTF8.GetBytes(updateMessage);
             channel.BasicPublish(exchange: "", routingKey: "order_updates", body: body);
 
-            return success;
+            Log.Information($"Order update sent: {order.OrderId} - Status: {updateMessage}");
         }
+
     }
 }
+
+
