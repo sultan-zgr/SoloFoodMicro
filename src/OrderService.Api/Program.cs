@@ -6,6 +6,7 @@ using FluentValidation;
 using OrderService.Api.RabbitMQ;
 using StackExchange.Redis;
 using OrderService.Api.Mapping;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,11 +31,16 @@ builder.Services.AddSingleton<IRabbitMQConnection, RabbitMQConnection>();
 builder.Services.AddSingleton<OrderPublisher>();
 
 // AutoMapper ekleniyor
-builder.Services.AddAutoMapper(typeof(MappingProfile));
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateLogger();
 
 var app = builder.Build();
 

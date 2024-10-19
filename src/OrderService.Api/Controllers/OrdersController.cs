@@ -37,22 +37,22 @@ namespace OrderService.Api.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetOrder(int id)
         {
-            //Önce Redis kontrol et
+            // Redis’ten veriyi çek
             var cachedOrder = await _cacheService.GetCacheAsync<OrderDto>($"Order:{id}");
-            if (cachedOrder == null)
+            if (cachedOrder != null)
             {
-                return Ok(cachedOrder);
+                return Ok(cachedOrder);  // Redis'ten gelen veri doğru ise direkt döneriz
             }
 
-            //DB'den getir ve Redis ekle
+            // Veritabanından getir
             var order = await _context.Orders.FindAsync(id);
             if (order == null) return NotFound();
 
+            // Veriyi DTO'ya dönüştür ve Redis’e ekle
             var orderDto = _mapper.Map<OrderDto>(order);
             await _cacheService.SetCacheAsync($"Order:{id}", orderDto, TimeSpan.FromMinutes(10));
 
             return Ok(orderDto);
-
         }
 
         [HttpPost]
@@ -62,12 +62,14 @@ namespace OrderService.Api.Controllers
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
 
-            _publisher.PublishOrderCreated(order);
+            // Order -> OrderMessage dönüşümünü AutoMapper ile yap
+            var orderMessage = _mapper.Map<OrderMessage>(order);
+            _publisher.PublishOrderCreated(orderMessage);
 
+            // Redis’e ekle
             await _cacheService.SetCacheAsync($"Order:{order.Id}", orderDto, TimeSpan.FromMinutes(10));
 
             return Ok(order);
-
         }
 
     }

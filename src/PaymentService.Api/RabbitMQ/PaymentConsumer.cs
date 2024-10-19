@@ -1,4 +1,5 @@
-﻿using OrderService.Api.RabbitMQ;
+﻿using OrderService.Api.Models;
+using OrderService.Api.RabbitMQ;
 using PaymentService.Api.DTOs;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -20,7 +21,7 @@ namespace PaymentService.Api.RabbitMQ
         public void StartListening()
         {
             using var channel = _connection.CreateModel();
-            channel.QueueDeclare(queue:"orders",durable:false,exclusive:false, autoDelete:false);
+            channel.QueueDeclare(queue: "orders", durable: false, exclusive: false, autoDelete: false);
 
             var consumer = new EventingBasicConsumer(channel);
             consumer.Received += (model, ea) =>
@@ -40,7 +41,6 @@ namespace PaymentService.Api.RabbitMQ
                 else
                 {
                     Log.Error($"Payment failed for Order: {order.OrderId}");
-                    // Compensation işlemi tetiklenebilir.
                 }
             };
 
@@ -52,7 +52,21 @@ namespace PaymentService.Api.RabbitMQ
 
         private bool ProcessPayment(OrderMessage order)
         {
-            return new Random().Next(2) == 1;  //Ödeme işlemini simüle
+            bool success = new Random().Next(2) == 1;  // Ödeme işlemini simüle
+
+            using var channel = _connection.CreateModel();
+            channel.QueueDeclare(queue: "order_updates", durable: false, exclusive: false, autoDelete: false);
+
+            var updateMessage = JsonSerializer.Serialize(new OrderUpdateMessage
+            {
+                OrderId = order.OrderId,
+                Status = success ? OrderStatus.Completed : OrderStatus.Failed
+            });
+
+            var body = Encoding.UTF8.GetBytes(updateMessage);
+            channel.BasicPublish(exchange: "", routingKey: "order_updates", body: body);
+
+            return success;
         }
     }
 }

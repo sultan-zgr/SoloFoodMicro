@@ -11,8 +11,8 @@ using OrderService.Api.Data;
 namespace OrderService.Api.Migrations
 {
     [DbContext(typeof(OrderDbContext))]
-    [Migration("20241019144255_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20241019210045_mig_1")]
+    partial class mig_1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -43,9 +43,8 @@ namespace OrderService.Api.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

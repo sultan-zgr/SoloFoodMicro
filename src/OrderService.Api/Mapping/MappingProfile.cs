@@ -8,8 +8,8 @@ namespace OrderService.Api.Mapping
     {
         public MappingProfile()
         {
-            CreateMap<OrderDto, Order>();
-            CreateMap<Order, OrderDto>();
+            CreateMap<Order, OrderDto>().ReverseMap();
+            CreateMap<Order, OrderMessage>().ReverseMap();
         }
     }
 }
