@@ -6,6 +6,6 @@
         public string CustomerName { get; set; }
         public string Product { get; set; }
         public decimal Price { get; set; }
-        public string Status { get; set; } = "Pending"; // Varsayılan durum
+        public OrderStatus Status { get; set; } = OrderStatus.Pending;
     }
 }
