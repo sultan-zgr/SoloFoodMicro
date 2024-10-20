@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  order-service:
+    build:
+      context: ./OrderService
+      dockerfile: Dockerfile
+    ports:
+      - "5001:80"
+    depends_on:
+      - redis
+      - rabbitmq
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=order-db;Database=OrderDb;User Id=sa;Password=yourStrong(!)Password;
+      - Redis__Connection=redis:6379
+    networks:
+      - microservices-network
+
+  payment-service:
+    build:
+      context: ./PaymentService
+      dockerfile: Dockerfile
+    ports:
+      - "5002:80"
+    depends_on:
+      - redis
+      - rabbitmq
+    environment:
+      - RabbitMQ__HostName=rabbitmq
+      - Redis__Connection=redis:6379
+    networks:
+      - microservices-network
+
+  redis:
+    image: "redis:latest"
+    ports:
+      - "6379:6379"
+    networks:
+      - microservices-network
+
+  rabbitmq:
+    image: "rabbitmq:management"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - microservices-network
+
+  order-db:
+    image: "mcr.microsoft.com/mssql/server:2022-latest"
+    environment:
+      SA_PASSWORD: "yourStrong(!)Password"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge

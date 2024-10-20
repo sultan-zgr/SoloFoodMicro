@@ -9,8 +9,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrderService.Api", "src\Ord
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PaymentService.Api", "src\PaymentService.Api\PaymentService.Api.csproj", "{D9AF9C04-32E3-4BDC-AF57-AC4AC607D2F9}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{242E30F7-A4EC-4773-B6EE-4367952EE253}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{13D10348-4EAB-4E63-A997-A3973F05333B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OrderService.Tests", "OrderService.Tests", "{93F6986D-506D-4F77-BF59-13B6CD647315}"
@@ -22,6 +20,11 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrdersService.UnitTests", "tests\OrderService.Tests\Unit\OrdersControllerTests\OrdersService.UnitTests.csproj", "{E0D28250-9049-472F-8E7D-B8F64FCE26B6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderService.IntegrationTests", "tests\OrderService.Tests\Integration\OrderService.IntegrationTests\OrderService.IntegrationTests.csproj", "{D49EBEDE-73DF-4107-B8A4-0EA9345B09DD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{FBEF4EA0-8D5A-4748-AC8D-FB120A16B4B0}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
