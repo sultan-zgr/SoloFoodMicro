@@ -14,17 +14,21 @@ namespace OrderService.Api.RabbitMQ
         {
             _connection = connection;
         }
+
         public void PublishOrderCreated(OrderMessage orderMessage)
         {
             try
             {
                 using var channel = _connection.CreateModel();
-                channel.QueueDeclare(queue: "orders", durable: false, exclusive: false, autoDelete: false);
+                channel.QueueDeclare(queue: "orders", durable: true, exclusive: false, autoDelete: false);
 
                 var message = JsonSerializer.Serialize(orderMessage);
                 var body = Encoding.UTF8.GetBytes(message);
 
-                channel.BasicPublish(exchange: "", routingKey: "orders", body: body);
+                var properties = channel.CreateBasicProperties();
+                properties.Persistent = true;  // Mesajın kalıcı olmasını sağlıyoruz
+
+                channel.BasicPublish(exchange: "", routingKey: "orders", basicProperties: properties, body: body);
 
                 Log.Information($"Order message sent: {orderMessage.OrderId}");
             }
@@ -33,6 +37,5 @@ namespace OrderService.Api.RabbitMQ
                 Log.Error($"Failed to publish order message: {ex.Message}");
             }
         }
-
     }
 }

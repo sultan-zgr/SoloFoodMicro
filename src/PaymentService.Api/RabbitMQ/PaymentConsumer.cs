@@ -20,53 +20,63 @@ namespace PaymentService.Api.RabbitMQ
 
         public void StartListening()
         {
-            using var channel = _connection.GetConnection().CreateModel();
-            channel.QueueDeclare(queue: "orders", durable: false, exclusive: false, autoDelete: false);
+            using var channel = _connection.CreateModel();
+            channel.QueueDeclare(queue: "orders", durable: true, exclusive: false, autoDelete: false);
 
             var consumer = new EventingBasicConsumer(channel);
-            consumer.Received += (model, ea) =>
+            consumer.Received += async (model, ea) =>
             {
-                var body = ea.Body.ToArray();
-                var message = Encoding.UTF8.GetString(body);
+                try
+                {
+                    var body = ea.Body.ToArray();
+                    var message = Encoding.UTF8.GetString(body);
 
-                var orderMessage = JsonSerializer.Deserialize<OrderMessage>(message);
-                Log.Information($"Processing payment for Order: {orderMessage.OrderId} - {orderMessage.Product}");
+                    var orderMessage = JsonSerializer.Deserialize<OrderMessage>(message);
+                    Log.Information($"Processing payment for Order: {orderMessage.OrderId} - {orderMessage.Product}");
 
-                var success = ProcessPayment(orderMessage);
+                    var success = ProcessPayment(orderMessage);
 
-                // Ödeme sonucunu order_updates kuyruğuna gönder
-                PublishOrderUpdate(orderMessage, success);
+                    PublishOrderUpdate(orderMessage, success);
+
+                    // Mesajı başarıyla işledikten sonra onay gönder
+                    channel.BasicAck(ea.DeliveryTag, false);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"Error processing message: {ex.Message}");
+                    // Hata durumunda mesajı yeniden kuyruğa ekle
+                    channel.BasicNack(ea.DeliveryTag, false, true);
+                }
             };
 
-            channel.BasicConsume(queue: "orders", autoAck: true, consumer: consumer);
-            Log.Information("Waiting for orders...");
-            Console.ReadLine();
+            channel.BasicConsume(queue: "orders", autoAck: false, consumer: consumer);
+            Log.Information("PaymentConsumer is listening to RabbitMQ.");
         }
 
         private bool ProcessPayment(OrderMessage order)
         {
-            // Ödeme işlemini simüle ediyoruz (Başarılı veya Başarısız)
-            return new Random().Next(2) == 1;
+            return new Random().Next(2) == 1;  // Ödeme işlemini simüle ediyoruz
         }
 
         private void PublishOrderUpdate(OrderMessage order, bool success)
         {
-            using var channel = _connection.GetConnection().CreateModel();
-            channel.QueueDeclare(queue: "order_updates", durable: false, exclusive: false, autoDelete: false);
+            using var channel = _connection.CreateModel();
+            channel.QueueDeclare(queue: "order_updates", durable: true, exclusive: false, autoDelete: false);
 
             var updateMessage = JsonSerializer.Serialize(new OrderUpdateMessage
             {
                 OrderId = order.OrderId,
-                Status = success ? OrderStatus.Completed : OrderStatus.Failed  // String yerine Enum kullanımı
+                Status = success ? OrderStatus.Completed : OrderStatus.Failed
             });
 
             var body = Encoding.UTF8.GetBytes(updateMessage);
-            channel.BasicPublish(exchange: "", routingKey: "order_updates", body: body);
 
-            Log.Information($"Order update sent: {order.OrderId} - Status: {updateMessage}");
+            var properties = channel.CreateBasicProperties();
+            properties.Persistent = true;
+
+            channel.BasicPublish(exchange: "", routingKey: "order_updates", basicProperties: properties, body: body);
+
+            Log.Information($"Order update sent: {order.OrderId} - Status: {success}");
         }
-
     }
 }
-
-

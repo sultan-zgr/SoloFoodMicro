@@ -1,24 +1,51 @@
 ﻿using RabbitMQ.Client;
+using Serilog;
 
 namespace PaymentService.Api.RabbitMQ
 {
-    public class RabbitMQConnection : IRabbitMQConnection
+    public class RabbitMQConnection : IRabbitMQConnection, IDisposable
     {
-        private readonly IConnectionFactory _factory;
+        private readonly IConnectionFactory _connectionFactory;
         private IConnection _connection;
+        private bool _disposed;
 
-        public RabbitMQConnection()
+        public RabbitMQConnection(IConnectionFactory connectionFactory)
         {
-            _factory = new ConnectionFactory() { HostName = "localhost" };
+            _connectionFactory = connectionFactory;
         }
 
-        public IConnection GetConnection()
+        public bool IsConnected => _connection != null && _connection.IsOpen && !_disposed;
+
+        public IModel CreateModel()
         {
-            if (_connection == null || !_connection.IsOpen)
+            if (!IsConnected)
             {
-                _connection = _factory.CreateConnection();
+                TryConnect();
             }
-            return _connection;
+            return _connection.CreateModel();
+        }
+
+        public bool TryConnect()
+        {
+            try
+            {
+                _connection = _connectionFactory.CreateConnection();
+                Log.Information("RabbitMQ connected.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"RabbitMQ connection failed: {ex.Message}");
+                return false;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _connection?.Close();
+            _connection?.Dispose();
+            _disposed = true;
         }
     }
 }

@@ -1,9 +1,9 @@
 ﻿using RabbitMQ.Client;
-using System;
+using Serilog;
 
 namespace OrderService.Api.RabbitMQ
 {
-    public class RabbitMQConnection : IRabbitMQConnection, IDisposable
+    public class RabbitMQConnection : IRabbitMQConnection
     {
         private readonly IConnectionFactory _connectionFactory;
         private IConnection _connection;
@@ -16,28 +16,46 @@ namespace OrderService.Api.RabbitMQ
 
         public bool IsConnected => _connection != null && _connection.IsOpen && !_disposed;
 
+        public bool TryConnect()
+        {
+            try
+            {
+                _connection = _connectionFactory.CreateConnection();
+                Log.Information("RabbitMQ connected.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"RabbitMQ connection failed: {ex.Message}");
+                return false;
+            }
+        }
+
+        public IConnection GetConnection()
+        {
+            if (!IsConnected)
+            {
+                TryConnect();
+            }
+            return _connection;
+        }
+
         public IModel CreateModel()
         {
             if (!IsConnected)
             {
-                throw new InvalidOperationException("No RabbitMQ connections are available to perform this action");
+                throw new InvalidOperationException("No RabbitMQ connections are available.");
             }
-
             return _connection.CreateModel();
         }
 
         public void Dispose()
         {
             if (_disposed) return;
-            _disposed = true;
+
             _connection?.Close();
             _connection?.Dispose();
-        }
-
-        public bool TryConnect()
-        {
-            _connection = _connectionFactory.CreateConnection();
-            return IsConnected;
+            _disposed = true;
         }
     }
 }

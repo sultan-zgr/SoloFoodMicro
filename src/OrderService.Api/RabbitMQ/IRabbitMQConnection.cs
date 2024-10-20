@@ -6,6 +6,7 @@ namespace OrderService.Api.RabbitMQ
     {
         IModel CreateModel();
         bool IsConnected { get; }
+        IConnection GetConnection();
         bool TryConnect();
     }
 }
